@@ -1,0 +1,418 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  SARPRAS
+  KEPSEK
+  GURU
+  EKSTERNAL
+
+  @@map("user_role_enum")
+}
+
+enum AssetCondition {
+  GOOD
+  SLIGHTLY_DAMAGED
+  HEAVILY_DAMAGED
+  LOST
+
+  @@map("asset_condition_enum")
+}
+
+enum AssetStatus {
+  AVAILABLE
+  BORROWED
+  UNDER_MAINTENANCE
+  DISPOSED
+
+  @@map("asset_status_enum")
+}
+
+enum BorrowerType {
+  INTERNAL
+  EXTERNAL
+
+  @@map("borrower_type_enum")
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ON_LOAN
+  RETURNED
+
+  @@map("loan_status_enum")
+}
+
+enum MutationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+
+  @@map("mutation_status_enum")
+}
+
+enum MaintenanceType {
+  SELF
+  VENDOR
+
+  @@map("maintenance_type_enum")
+}
+
+enum MaintenanceStatus {
+  REPORTED
+  INSPECTED
+  IN_PROGRESS
+  COMPLETED
+  ESCALATED_DISPOSAL
+
+  @@map("maintenance_status_enum")
+}
+
+enum AuditStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+
+  @@map("audit_status_enum")
+}
+
+enum AuditMatch {
+  MATCH
+  MISPLACED
+  MISSING
+
+  @@map("audit_match_enum")
+}
+
+enum DisposalMethod {
+  SCRAP_DESTROY
+  SELL_AUCTION
+  DONATE
+
+  @@map("disposal_method_enum")
+}
+
+enum DisposalReason {
+  DAMAGED_BEYOND_REPAIR
+  LOST
+  OBSOLETE
+
+  @@map("disposal_reason_enum")
+}
+
+// -------------------------------------------------------------
+// MODELS
+// -------------------------------------------------------------
+
+model User {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username     String    @unique @db.VarChar(50)
+  email        String    @unique @db.VarChar(100)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(100)
+  nipNuptk     String?   @map("nip_nuptk") @db.VarChar(50)
+  phoneNumber  String?   @map("phone_number") @db.VarChar(25)
+  role         UserRole
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  picRooms         Room[]             @relation("RoomPIC")
+  createdProcures  Procurement[]      @relation("ProcurementCreator")
+  internalLoans    AssetLoan[]        @relation("BorrowerUser")
+  approvedLoans    AssetLoan[]        @relation("LoanApprover")
+  proposedMutates  AssetMutation[]    @relation("MutationProposer")
+  approvedMutates  AssetMutation[]    @relation("MutationApprover")
+  reportedDamages  AssetMaintenance[] @relation("DamageReporter")
+  auditsConducted  AuditSession[]     @relation("SessionAuditor")
+  disposalsDone    AssetDisposal[]    @relation("DisposalExecutor")
+
+  @@map("users")
+}
+
+model Category {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String        @unique @db.VarChar(5)
+  name        String        @db.VarChar(100)
+  description String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  subCategories SubCategory[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId  String    @map("category_id") @db.Uuid
+  code        String    @db.VarChar(5)
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  items    Item[]
+
+  @@unique([categoryId, code])
+  @@map("sub_categories")
+}
+
+model Item {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subCategoryId  String      @map("sub_category_id") @db.Uuid
+  name           String      @db.VarChar(150)
+  brand          String      @db.VarChar(100)
+  unit           String      @db.VarChar(50)
+  specifications String?     @db.Text
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  subCategory      SubCategory       @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+  procurementItems ProcurementItem[]
+  assetItems       AssetItem[]
+
+  @@map("items")
+}
+
+model Room {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String    @unique @db.VarChar(20)
+  name         String    @db.VarChar(100)
+  buildingName String?   @map("building_name") @db.VarChar(100)
+  floor        Int       @default(1)
+  picUserId    String?   @map("pic_user_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  picUser       User?           @relation("RoomPIC", fields: [picUserId], references: [id], onDelete: SetNull)
+  currentAssets AssetItem[]     @relation("CurrentRoom")
+  mutationsFrom AssetMutation[] @relation("FromRoom")
+  mutationsTo   AssetMutation[] @relation("ToRoom")
+  scannedAudits AuditItem[]     @relation("ScannedRoom")
+  systemAudits  AuditItem[]     @relation("SystemRoom")
+
+  @@map("rooms")
+}
+
+model FundingSource {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(20)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+
+  procurements Procurement[]
+
+  @@map("funding_sources")
+}
+
+model Procurement {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  procurementNo   String   @unique @map("procurement_no") @db.VarChar(50)
+  fundingSourceId String   @map("funding_source_id") @db.Uuid
+  procurementDate DateTime @map("procurement_date") @db.Date
+  receiptBastNo   String?  @map("receipt_bast_no") @db.VarChar(100)
+  totalAmount     Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  fundingSource FundingSource     @relation(fields: [fundingSourceId], references: [id], onDelete: Restrict)
+  creator       User              @relation("ProcurementCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  items         ProcurementItem[]
+  assetItems    AssetItem[]
+
+  @@map("procurements")
+}
+
+model ProcurementItem {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  procurementId String  @map("procurement_id") @db.Uuid
+  itemId        String  @map("item_id") @db.Uuid
+  quantity      Int
+  unitPrice     Decimal @map("unit_price") @db.Decimal(15, 2)
+  totalPrice    Decimal @map("total_price") @db.Decimal(15, 2)
+
+  procurement Procurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  item        Item        @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@map("procurement_items")
+}
+
+model AssetItem {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventoryCode    String         @unique @map("inventory_code") @db.VarChar(50)
+  itemId           String         @map("item_id") @db.Uuid
+  procurementId    String         @map("procurement_id") @db.Uuid
+  currentRoomId    String         @map("current_room_id") @db.Uuid
+  serialNumber     String?        @map("serial_number") @db.VarChar(100)
+  acquisitionPrice Decimal        @map("acquisition_price") @db.Decimal(15, 2)
+  currentValue     Decimal        @map("current_value") @db.Decimal(15, 2)
+  condition        AssetCondition
+  status           AssetStatus
+  qrCodeUrl        String?        @map("qr_code_url") @db.Text
+  photoUrl         String?        @map("photo_url") @db.Text
+  isDisposed       Boolean        @default(false) @map("is_disposed")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  item         Item               @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  procurement  Procurement        @relation(fields: [procurementId], references: [id], onDelete: Restrict)
+  currentRoom  Room               @relation("CurrentRoom", fields: [currentRoomId], references: [id], onDelete: Restrict)
+  loanItems    AssetLoanItem[]
+  maintenances AssetMaintenance[]
+  mutations    AssetMutation[]
+  auditItems   AuditItem[]
+  disposal     AssetDisposal?
+
+  @@index([inventoryCode])
+  @@index([currentRoomId])
+  @@index([status])
+  @@map("asset_items")
+}
+
+model AssetLoan {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loanNo             String       @unique @map("loan_no") @db.VarChar(50)
+  borrowerType       BorrowerType @map("borrower_type")
+  borrowerUserId     String?      @map("borrower_user_id") @db.Uuid
+  borrowerName       String       @map("borrower_name") @db.VarChar(100)
+  borrowerPhone      String       @map("borrower_phone") @db.VarChar(25)
+  borrowerIdCard     String?      @map("borrower_id_card") @db.VarChar(50)
+  startDate          DateTime     @map("start_date") @db.Date
+  expectedReturnDate DateTime     @map("expected_return_date") @db.Date
+  actualReturnDate   DateTime?    @map("actual_return_date") @db.Date
+  purpose            String       @db.Text
+  status             LoanStatus   @default(PENDING)
+  penaltyNotes       String?      @map("penalty_notes") @db.Text
+  approvedBy         String?      @map("approved_by") @db.Uuid
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  borrowerUser User?           @relation("BorrowerUser", fields: [borrowerUserId], references: [id], onDelete: SetNull)
+  approver     User?           @relation("LoanApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  items        AssetLoanItem[]
+
+  @@map("asset_loans")
+}
+
+model AssetLoanItem {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loanId          String         @map("loan_id") @db.Uuid
+  assetItemId     String         @map("asset_item_id") @db.Uuid
+  conditionBefore AssetCondition @map("condition_before")
+  conditionAfter  AssetCondition? @map("condition_after")
+
+  loan      AssetLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  assetItem AssetItem @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
+
+  @@map("asset_loan_items")
+}
+
+model AssetMutation {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mutationNo      String         @unique @map("mutation_no") @db.VarChar(50)
+  assetItemId     String         @map("asset_item_id") @db.Uuid
+  fromRoomId      String         @map("from_room_id") @db.Uuid
+  toRoomId        String         @map("to_room_id") @db.Uuid
+  proposedBy      String         @map("proposed_by") @db.Uuid
+  reason          String         @db.Text
+  status          MutationStatus @default(PENDING)
+  bastDocumentUrl String?        @map("bast_document_url") @db.Text
+  approvedBy      String?        @map("approved_by") @db.Uuid
+  executedAt      DateTime?      @map("executed_at") @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  assetItem AssetItem @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
+  fromRoom  Room      @relation("FromRoom", fields: [fromRoomId], references: [id], onDelete: Restrict)
+  toRoom    Room      @relation("ToRoom", fields: [toRoomId], references: [id], onDelete: Restrict)
+  proposer  User      @relation("MutationProposer", fields: [proposedBy], references: [id], onDelete: Restrict)
+  approver  User?     @relation("MutationApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@map("asset_mutations")
+}
+
+model AssetMaintenance {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetItemId       String            @map("asset_item_id") @db.Uuid
+  reportedBy        String            @map("reported_by") @db.Uuid
+  damageDescription String            @map("damage_description") @db.Text
+  damagePhotoUrl    String            @map("damage_photo_url") @db.Text
+  maintenanceType   MaintenanceType?  @map("maintenance_type")
+  vendorName        String?           @map("vendor_name") @db.VarChar(100)
+  cost              Decimal           @default(0) @db.Decimal(15, 2)
+  status            MaintenanceStatus @default(REPORTED)
+  completedAt       DateTime?         @map("completed_at") @db.Timestamptz(6)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  assetItem AssetItem @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
+  reporter  User      @relation("DamageReporter", fields: [reportedBy], references: [id], onDelete: Restrict)
+
+  @@map("asset_maintenances")
+}
+
+model AuditSession {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionName       String      @map("session_name") @db.VarChar(100)
+  auditYear         Int         @map("audit_year")
+  startDate         DateTime    @map("start_date") @db.Date
+  endDate           DateTime?   @map("end_date") @db.Date
+  auditorId         String      @map("auditor_id") @db.Uuid
+  status            AuditStatus @default(OPEN)
+  summaryReportUrl  String?     @map("summary_report_url") @db.Text
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  auditor User        @relation("SessionAuditor", fields: [auditorId], references: [id], onDelete: Restrict)
+  items   AuditItem[]
+
+  @@map("audit_sessions")
+}
+
+model AuditItem {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditSessionId    String         @map("audit_session_id") @db.Uuid
+  assetItemId       String         @map("asset_item_id") @db.Uuid
+  scannedRoomId     String         @map("scanned_room_id") @db.Uuid
+  systemRoomId      String         @map("system_room_id") @db.Uuid
+  physicalCondition AssetCondition @map("physical_condition")
+  matchStatus       AuditMatch     @map("match_status")
+  scannedAt         DateTime       @default(now()) @map("scanned_at") @db.Timestamptz(6)
+
+  auditSession AuditSession @relation(fields: [auditSessionId], references: [id], onDelete: Cascade)
+  assetItem    AssetItem    @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
+  scannedRoom  Room         @relation("ScannedRoom", fields: [scannedRoomId], references: [id], onDelete: Restrict)
+  systemRoom   Room         @relation("SystemRoom", fields: [systemRoomId], references: [id], onDelete: Restrict)
+
+  @@map("audit_items")
+}
+
+model AssetDisposal {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  disposalNo     String         @unique @map("disposal_no") @db.VarChar(50)
+  assetItemId    String         @unique @map("asset_item_id") @db.Uuid
+  disposalDate   DateTime       @map("disposal_date") @db.Date
+  disposalMethod DisposalMethod @map("disposal_method")
+  reason         DisposalReason
+  witness1Name   String         @map("witness_1_name") @db.VarChar(100)
+  witness1Role   String         @map("witness_1_role") @db.VarChar(100)
+  witness2Name   String         @map("witness_2_name") @db.VarChar(100)
+  witness2Role   String         @map("witness_2_role") @db.VarChar(100)
+  evidenceDocUrl String         @map("evidence_doc_url") @db.Text
+  executedBy     String         @map("executed_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  assetItem AssetItem @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
+  executor  User      @relation("DisposalExecutor", fields: [executedBy], references: [id], onDelete: Restrict)
+
+  @@map("asset_disposals")
+}
