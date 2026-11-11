@@ -15,7 +15,7 @@ import { JwtStrategy } from "./jwt.strategy";
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>("JWT_SECRET") || "pgri7-default-secret-key-32chars",
         signOptions: {
-          expiresIn: config.get<string>("JWT_EXPIRES_IN") || "1d",
+          expiresIn: (config.get<string>("JWT_EXPIRES_IN") || "1d") as any,
         },
       }),
     }),
