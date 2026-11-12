@@ -41,12 +41,26 @@ export class MutationsController {
 
   @Patch(":id/review")
   @Roles(UserRole.ADMIN, UserRole.SARPRAS)
-  @ApiOperation({ summary: "Persetujuan mutasi ruangan (Sarpras) & update otomatis lokasi aset" })
+  @ApiOperation({ summary: "Persetujuan permohonan mutasi ruangan (Wakasek Sarpras)" })
   reviewMutation(
     @Param("id") id: string,
     @Body("approve") approve: boolean,
+    @Body("executeImmediately") executeImmediately: boolean,
     @CurrentUser("id") approverId: string,
   ) {
-    return this.mutationsService.reviewMutation(id, approve, approverId);
+    return this.mutationsService.reviewMutation(id, approve, approverId, executeImmediately);
+  }
+
+  @Post(":id/execute")
+  @Roles(UserRole.ADMIN, UserRole.SARPRAS)
+  @ApiOperation({ summary: "Konfirmasi pemindahan fisik tuntas, update lokasi aset, & update DIR" })
+  executeMutation(@Param("id") id: string) {
+    return this.mutationsService.executeMutation(id);
+  }
+
+  @Get(":id/bast")
+  @ApiOperation({ summary: "Ambil data siap cetak Berita Acara Serah Terima (BAST) Mutasi Aset" })
+  getMutationBast(@Param("id") id: string) {
+    return this.mutationsService.getMutationBast(id);
   }
 }

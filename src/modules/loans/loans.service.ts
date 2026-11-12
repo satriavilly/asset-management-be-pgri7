@@ -205,6 +205,7 @@ export class LoansService {
         data: {
           status: LoanStatus.RETURNED,
           actualReturnDate: new Date(),
+          penaltyAmount: dto.penaltyAmount ?? 0,
           penaltyNotes: dto.penaltyNotes,
         },
       });
@@ -218,11 +219,16 @@ export class LoansService {
           data: { conditionAfter },
         });
 
-        // Set asset status back to AVAILABLE and update condition if changed
+        // BPMN Proses 2: Jika Baik -> Tersedia; Jika Rusak/Hilang -> Tidak tersedia untuk dipinjam
+        const nextStatus =
+          conditionAfter === AssetCondition.GOOD
+            ? AssetStatus.AVAILABLE
+            : AssetStatus.UNDER_MAINTENANCE;
+
         await tx.assetItem.update({
           where: { id: it.assetItemId },
           data: {
-            status: AssetStatus.AVAILABLE,
+            status: nextStatus,
             condition: conditionAfter,
           },
         });

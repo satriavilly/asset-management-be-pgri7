@@ -4,12 +4,14 @@ import {
   IsDateString,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { BorrowerType } from "@prisma/client";
+import { AssetCondition, BorrowerType } from "@prisma/client";
 
 export class CreateLoanDto {
   @ApiProperty({ example: "LOAN/2026/XI/001", description: "Nomor registrasi peminjaman" })
@@ -62,6 +64,12 @@ export class CreateLoanDto {
 }
 
 export class ReturnLoanDto {
+  @ApiPropertyOptional({ example: 250000, description: "Nominal sanksi / denda ganti rugi (Rp) jika aset rusak atau hilang" })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  penaltyAmount?: number;
+
   @ApiPropertyOptional({ example: "Ada lecet pada bodi belakang proyektor", description: "Catatan sanksi atau denda ganti rugi" })
   @IsString()
   @IsOptional()
@@ -69,5 +77,5 @@ export class ReturnLoanDto {
 
   @ApiPropertyOptional({ description: "Rincian kondisi fisik saat dikembalikan per asset_item_id" })
   @IsOptional()
-  itemConditions?: { assetItemId: string; conditionAfter: any }[];
+  itemConditions?: { assetItemId: string; conditionAfter: AssetCondition }[];
 }
