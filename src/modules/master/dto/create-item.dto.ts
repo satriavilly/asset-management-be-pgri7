@@ -16,6 +16,11 @@ export class CreateItemDto {
   @IsNotEmpty()
   brand: string;
 
+  @ApiPropertyOptional({ example: "82YY001KID / Ultrabook", description: "Tipe / varian model barang" })
+  @IsString()
+  @IsOptional()
+  modelType?: string;
+
   @ApiProperty({ example: "unit", description: "Satuan kuantitas (unit, buah, set, rim)" })
   @IsString()
   @IsNotEmpty()

@@ -177,6 +177,7 @@ model Item {
   subCategoryId  String      @map("sub_category_id") @db.Uuid
   name           String      @db.VarChar(150)
   brand          String      @db.VarChar(100)
+  modelType      String?     @map("model_type") @db.VarChar(100)
   unit           String      @db.VarChar(50)
   specifications String?     @db.Text
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -295,6 +296,7 @@ model AssetLoan {
   actualReturnDate   DateTime?    @map("actual_return_date") @db.Date
   purpose            String       @db.Text
   status             LoanStatus   @default(PENDING)
+  penaltyAmount      Decimal?     @default(0) @map("penalty_amount") @db.Decimal(15, 2)
   penaltyNotes       String?      @map("penalty_notes") @db.Text
   approvedBy         String?      @map("approved_by") @db.Uuid
   createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)

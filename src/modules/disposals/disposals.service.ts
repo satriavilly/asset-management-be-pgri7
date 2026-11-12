@@ -103,4 +103,33 @@ export class DisposalsService {
 
     return disposal;
   }
+
+  async getDisposalBast(id: string) {
+    const disposal = await this.getDisposalById(id);
+    return {
+      documentTitle: "BERITA ACARA PENGHAPUSAN / PEMUSNAHAN ASET",
+      schoolName: "SMP PGRI 7 BANDUNG",
+      schoolAddress: "Jl. Kencanawangi Utara No. 20a, Bandung 40257",
+      disposalNo: disposal.disposalNo,
+      disposalDate: disposal.disposalDate,
+      disposalMethod: disposal.disposalMethod,
+      reason: disposal.reason,
+      evidenceDocUrl: disposal.evidenceDocUrl,
+      asset: {
+        inventoryCode: disposal.assetItem.inventoryCode,
+        name: disposal.assetItem.item.name,
+        brand: disposal.assetItem.item.brand,
+        modelType: disposal.assetItem.item.modelType,
+        serialNumber: disposal.assetItem.serialNumber,
+        acquisitionPrice: Number(disposal.assetItem.acquisitionPrice),
+        currentValue: Number(disposal.assetItem.currentValue),
+        lastRoom: disposal.assetItem.currentRoom.name,
+      },
+      witnesses: [
+        { name: disposal.witness1Name, role: disposal.witness1Role },
+        { name: disposal.witness2Name, role: disposal.witness2Role },
+      ],
+      executor: disposal.executor,
+    };
+  }
 }

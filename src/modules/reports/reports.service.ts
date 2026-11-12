@@ -19,6 +19,15 @@ export class ReportsService {
       maintenanceAssets,
       totalValuationAggregate,
       categories,
+      procurementCount,
+      procurementSum,
+      recentProcurements,
+      maintenanceCount,
+      maintenanceCostSum,
+      recentMaintenances,
+      latestAuditSession,
+      disposalCount,
+      recentDisposals,
     ] = await Promise.all([
       this.prisma.assetItem.count({ where: { isDisposed: false } }),
       this.prisma.assetItem.count({ where: { isDisposed: false, condition: AssetCondition.GOOD } }),
@@ -43,6 +52,30 @@ export class ReportsService {
             },
           },
         },
+      }),
+      this.prisma.procurement.count(),
+      this.prisma.procurement.aggregate({ _sum: { totalAmount: true } }),
+      this.prisma.procurement.findMany({
+        take: 5,
+        orderBy: { procurementDate: "desc" },
+        include: { fundingSource: true, _count: { select: { assetItems: true } } },
+      }),
+      this.prisma.assetMaintenance.count(),
+      this.prisma.assetMaintenance.aggregate({ _sum: { cost: true } }),
+      this.prisma.assetMaintenance.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        include: { assetItem: { include: { item: true } } },
+      }),
+      this.prisma.auditSession.findFirst({
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { items: true } } },
+      }),
+      this.prisma.assetDisposal.count(),
+      this.prisma.assetDisposal.findMany({
+        take: 5,
+        orderBy: { disposalDate: "desc" },
+        include: { assetItem: { include: { item: true } } },
       }),
     ]);
 
@@ -86,6 +119,55 @@ export class ReportsService {
         },
       },
       categoryDistribution,
+      monitoring: {
+        procurements: {
+          totalRecords: procurementCount,
+          totalAmount: Number(procurementSum._sum.totalAmount || 0),
+          recent: recentProcurements.map((p) => ({
+            id: p.id,
+            procurementNo: p.procurementNo,
+            procurementDate: p.procurementDate,
+            fundingSource: p.fundingSource.name,
+            totalAmount: Number(p.totalAmount),
+            totalAssetsGenerated: p._count.assetItems,
+          })),
+        },
+        maintenances: {
+          totalReports: maintenanceCount,
+          totalServiceCost: Number(maintenanceCostSum._sum.cost || 0),
+          recent: recentMaintenances.map((m) => ({
+            id: m.id,
+            inventoryCode: m.assetItem.inventoryCode,
+            itemName: m.assetItem.item.name,
+            maintenanceType: m.maintenanceType,
+            vendorName: m.vendorName,
+            cost: Number(m.cost),
+            status: m.status,
+            createdAt: m.createdAt,
+          })),
+        },
+        stockOpname: latestAuditSession
+          ? {
+              id: latestAuditSession.id,
+              sessionName: latestAuditSession.sessionName,
+              auditYear: latestAuditSession.auditYear,
+              status: latestAuditSession.status,
+              totalScannedItems: latestAuditSession._count.items,
+            }
+          : null,
+        disposals: {
+          totalDisposed: disposalCount,
+          recent: recentDisposals.map((d) => ({
+            id: d.id,
+            disposalNo: d.disposalNo,
+            inventoryCode: d.assetItem.inventoryCode,
+            itemName: d.assetItem.item.name,
+            disposalMethod: d.disposalMethod,
+            reason: d.reason,
+            disposalDate: d.disposalDate,
+          })),
+        },
+      },
     };
   }
 

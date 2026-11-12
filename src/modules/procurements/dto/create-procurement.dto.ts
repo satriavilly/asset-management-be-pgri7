@@ -29,9 +29,20 @@ export class ProcurementItemInputDto {
   @Min(0)
   unitPrice: number;
 
-  @ApiPropertyOptional({ example: "LAB-KOMP-1", description: "ID Ruangan penempatan awal fisik barang" })
+  @ApiProperty({ example: "LAB-KOMP-1", description: "ID Ruangan penempatan awal fisik barang" })
   @IsUUID()
   targetRoomId: string;
+
+  @ApiPropertyOptional({ type: [String], example: ["SN-2026-001", "SN-2026-002"], description: "Daftar nomor seri masing-masing unit aset" })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  serialNumbers?: string[];
+
+  @ApiPropertyOptional({ example: "https://aset.smppgri7bdg.sch.id/uploads/assets/laptop-01.jpg", description: "URL foto fisik barang" })
+  @IsString()
+  @IsOptional()
+  photoUrl?: string;
 }
 
 export class CreateProcurementDto {

@@ -89,6 +89,7 @@ erDiagram
 | `sub_category_id`| `UUID` | FK -> `sub_categories.id` | Sub-kategori klasifikasi |
 | `name` | `VARCHAR(150)` | NOT NULL | Nama barang (contoh: `Laptop ThinkPad V14`) |
 | `brand` | `VARCHAR(100)` | NOT NULL | Merek barang (contoh: `Lenovo`, `Maspion`) |
+| `model_type` | `VARCHAR(100)` | NULL | Tipe / model barang (contoh: `ThinkPad V14 Gen 4`) |
 | `unit` | `VARCHAR(50)` | NOT NULL | Satuan barang (`unit`, `buah`, `set`, `rim`) |
 | `specifications` | `TEXT` | NULL | Spesifikasi teknis (RAM, dimensi, prosesor) |
 | `created_at` | `TIMESTAMPTZ` | Default `NOW()` | Timestamp |
@@ -176,6 +177,7 @@ erDiagram
 | `actual_return_date`| `DATE` | NULL | Realisasi tanggal pengembalian fisik |
 | `purpose` | `TEXT` | NOT NULL | Keperluan peminjaman |
 | `status` | `loan_status_enum` | NOT NULL | `PENDING`, `APPROVED`, `REJECTED`, `ON_LOAN`, `RETURNED` |
+| `penalty_amount` | `NUMERIC(15,2)` | Default `0` | Nominal sanksi / denda ganti rugi (Rp) |
 | `penalty_notes` | `TEXT` | NULL | Catatan sanksi/ganti rugi jika rusak/hilang |
 | `approved_by` | `UUID` | FK -> `users.id` (Sarpras) | User yang memverifikasi |
 | `created_at` | `TIMESTAMPTZ` | Default `NOW()` | Timestamp |

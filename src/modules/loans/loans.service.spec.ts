@@ -49,4 +49,14 @@ describe("Loan Scheduling Conflict Logic", () => {
 
     expect(isScheduleOverlapping(newStart, newEnd, existingStart, existingEnd)).toBe(false);
   });
+
+  it("should map returned asset status based on physical condition after loan", () => {
+    const mapReturnStatus = (condition: string) =>
+      condition === "GOOD" ? "AVAILABLE" : "UNDER_MAINTENANCE";
+
+    expect(mapReturnStatus("GOOD")).toBe("AVAILABLE");
+    expect(mapReturnStatus("SLIGHTLY_DAMAGED")).toBe("UNDER_MAINTENANCE");
+    expect(mapReturnStatus("HEAVILY_DAMAGED")).toBe("UNDER_MAINTENANCE");
+    expect(mapReturnStatus("LOST")).toBe("UNDER_MAINTENANCE");
+  });
 });

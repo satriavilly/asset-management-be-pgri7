@@ -116,12 +116,15 @@ export class ProcurementsService {
           currentSeq += 1;
           const seqPadded = String(currentSeq).padStart(3, "0");
           const inventoryCode = `${catCode}.${subCatCode}.${seqPadded}.PGRI7.${procYear}`;
+          const serialNumber = itemInput.serialNumbers?.[q - 1] ?? null;
 
           // Generate QR Code data string & Data URL
           const qrPayload = JSON.stringify({
             code: inventoryCode,
             item: itemMaster.name,
             brand: itemMaster.brand,
+            modelType: itemMaster.modelType || undefined,
+            serialNumber: serialNumber || undefined,
             school: "SMP PGRI 7 Bandung",
             url: `https://aset.smppgri7bdg.sch.id/scan/${inventoryCode}`,
           });
@@ -137,6 +140,8 @@ export class ProcurementsService {
               itemId: itemMaster.id,
               procurementId: procurement.id,
               currentRoomId: room.id,
+              serialNumber,
+              photoUrl: itemInput.photoUrl ?? null,
               acquisitionPrice: itemInput.unitPrice,
               currentValue: itemInput.unitPrice,
               condition: AssetCondition.GOOD,

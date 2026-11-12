@@ -43,4 +43,10 @@ export class DisposalsController {
   getDisposalById(@Param("id") id: string) {
     return this.disposalsService.getDisposalById(id);
   }
+
+  @Get(":id/bast")
+  @ApiOperation({ summary: "Ambil data siap cetak Berita Acara Penghapusan / Pemusnahan Aset (BAST)" })
+  getDisposalBast(@Param("id") id: string) {
+    return this.disposalsService.getDisposalBast(id);
+  }
 }

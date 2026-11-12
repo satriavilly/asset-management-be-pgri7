@@ -79,12 +79,13 @@
 | `POST` | `/mutations` | Guru (PJ Ruangan), Sarpras | Ajukan permohonan mutasi aset antar ruangan |
 | `GET` | `/mutations` | All | Daftar histori pengajuan mutasi |
 | `PATCH` | `/mutations/:id/review`| Sarpras | Persetujuan mutasi (`APPROVED` / `REJECTED`) |
-| `POST` | `/mutations/:id/execute`| Sarpras | Konfirmasi pemindahan fisik tuntas + update DIR & generate BAST |
+| `POST` | `/mutations/:id/execute`| Sarpras | Konfirmasi pemindahan fisik tuntas + update lokasi & DIR |
+| `GET` | `/mutations/:id/bast` | All | Ambil payload siap cetak Berita Acara Mutasi (BAST) |
 
 ### F. Pelaporan Kerusakan & Pemeliharaan (`/maintenances`)
 | Method | Endpoint | Role Akses | Keterangan |
 |---|---|---|---|
-| `POST` | `/maintenances` | Guru, Staf, Sarpras | Lapor kerusakan aset (+ upload foto via HP) |
+| `POST` | `/maintenances/report` | Guru, Staf, Sarpras | Lapor kerusakan aset (+ upload foto via HP) |
 | `GET` | `/maintenances` | All | Daftar laporan kerusakan & servis |
 | `PATCH` | `/maintenances/:id/triage` | Sarpras | Triase perbaikan: `SELF` / `VENDOR` / `ESCALATED_DISPOSAL` |
 | `PATCH` | `/maintenances/:id/complete`| Sarpras | Konfirmasi perbaikan selesai + input realisasi biaya servis |
@@ -108,7 +109,7 @@
 ### I. Dashboard & Ekspor Laporan (`/reports` & `/dashboard`)
 | Method | Endpoint | Role Akses | Keterangan |
 |---|---|---|---|
-| `GET` | `/dashboard/executive` | All (Kepsek View) | Metrik ringkasan: Total aset, nilai rupiah aset, chart kondisi |
+| `GET` | `/dashboard/executive` | All (Kepsek View) | Metrik ringkasan KPI aset + monitoring pengadaan, biaya servis, stock opname, & penghapusan |
 | `GET` | `/reports/buku-induk/excel`| Kepsek, Sarpras, Admin| Download Buku Induk Inventaris format Excel (`.xlsx`) |
 | `GET` | `/reports/buku-induk/pdf` | Kepsek, Sarpras, Admin| Download Buku Induk format PDF |
 | `GET` | `/reports/dir/:roomId` | All | Download lembar Daftar Inventaris Ruangan (DIR) |
