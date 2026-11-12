@@ -1,11 +1,18 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "buildCommand": "npm run vercel-build",
+  "services": {
+    "web": {
+      "root": ".",
+      "entrypoint": "src/main.ts",
+      "buildCommand": "npm run build"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": {
+        "type": "service",
+        "service": "web"
+      }
     }
   ]
 }
