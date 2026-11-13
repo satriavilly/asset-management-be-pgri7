@@ -32,39 +32,45 @@ export class DisposalsService {
       throw new BadRequestException("Aset ini sudah pernah dihapus/dimusnahkan sebelumnya");
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Create disposal record with 2 witnesses
-      const disposal = await tx.assetDisposal.create({
-        data: {
-          disposalNo: dto.disposalNo,
-          assetItemId: dto.assetItemId,
-          disposalDate: new Date(dto.disposalDate),
-          disposalMethod: dto.disposalMethod,
-          reason: dto.reason,
-          witness1Name: dto.witness1Name,
-          witness1Role: dto.witness1Role,
-          witness2Name: dto.witness2Name,
-          witness2Role: dto.witness2Role,
-          evidenceDocUrl: dto.evidenceDocUrl,
-          executedBy: executorId,
-        },
-        include: {
-          assetItem: { include: { item: true, currentRoom: true } },
-          executor: { select: { id: true, fullName: true, role: true } },
-        },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        // 1. Create disposal record with 2 witnesses
+        const disposal = await tx.assetDisposal.create({
+          data: {
+            disposalNo: dto.disposalNo,
+            assetItemId: dto.assetItemId,
+            disposalDate: new Date(dto.disposalDate),
+            disposalMethod: dto.disposalMethod,
+            reason: dto.reason,
+            witness1Name: dto.witness1Name,
+            witness1Role: dto.witness1Role,
+            witness2Name: dto.witness2Name,
+            witness2Role: dto.witness2Role,
+            evidenceDocUrl: dto.evidenceDocUrl,
+            executedBy: executorId,
+          },
+          include: {
+            assetItem: { include: { item: true, currentRoom: true } },
+            executor: { select: { id: true, fullName: true, role: true } },
+          },
+        });
 
-      // 2. Soft-delete the asset in asset_items table
-      await tx.assetItem.update({
-        where: { id: dto.assetItemId },
-        data: {
-          isDisposed: true,
-          status: AssetStatus.DISPOSED,
-        },
-      });
+        // 2. Soft-delete the asset in asset_items table
+        await tx.assetItem.update({
+          where: { id: dto.assetItemId },
+          data: {
+            isDisposed: true,
+            status: AssetStatus.DISPOSED,
+          },
+        });
 
-      return disposal;
-    });
+        return disposal;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 
   async getDisposals() {

@@ -88,39 +88,45 @@ export class MutationsService {
       throw new BadRequestException("Mutasi ini sudah diproses sebelumnya");
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const status = approve
-        ? executeImmediately
-          ? MutationStatus.COMPLETED
-          : MutationStatus.APPROVED
-        : MutationStatus.REJECTED;
+    return this.prisma.$transaction(
+      async (tx) => {
+        const status = approve
+          ? executeImmediately
+            ? MutationStatus.COMPLETED
+            : MutationStatus.APPROVED
+          : MutationStatus.REJECTED;
 
-      const updated = await tx.assetMutation.update({
-        where: { id },
-        data: {
-          status,
-          approvedBy: approverId,
-          executedAt: approve && executeImmediately ? new Date() : null,
-        },
-        include: {
-          assetItem: { include: { item: true } },
-          fromRoom: true,
-          toRoom: true,
-        },
-      });
-
-      if (approve && executeImmediately) {
-        // Automatically update asset current_room_id to target room
-        await tx.assetItem.update({
-          where: { id: mutation.assetItemId },
+        const updated = await tx.assetMutation.update({
+          where: { id },
           data: {
-            currentRoomId: mutation.toRoomId,
+            status,
+            approvedBy: approverId,
+            executedAt: approve && executeImmediately ? new Date() : null,
+          },
+          include: {
+            assetItem: { include: { item: true } },
+            fromRoom: true,
+            toRoom: true,
           },
         });
-      }
 
-      return updated;
-    });
+        if (approve && executeImmediately) {
+          // Automatically update asset current_room_id to target room
+          await tx.assetItem.update({
+            where: { id: mutation.assetItemId },
+            data: {
+              currentRoomId: mutation.toRoomId,
+            },
+          });
+        }
+
+        return updated;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 
   async executeMutation(id: string) {
@@ -137,31 +143,37 @@ export class MutationsService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.assetMutation.update({
-        where: { id },
-        data: {
-          status: MutationStatus.COMPLETED,
-          executedAt: new Date(),
-        },
-        include: {
-          assetItem: { include: { item: true } },
-          fromRoom: true,
-          toRoom: true,
-          proposer: { select: { id: true, fullName: true } },
-          approver: { select: { id: true, fullName: true } },
-        },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.assetMutation.update({
+          where: { id },
+          data: {
+            status: MutationStatus.COMPLETED,
+            executedAt: new Date(),
+          },
+          include: {
+            assetItem: { include: { item: true } },
+            fromRoom: true,
+            toRoom: true,
+            proposer: { select: { id: true, fullName: true } },
+            approver: { select: { id: true, fullName: true } },
+          },
+        });
 
-      await tx.assetItem.update({
-        where: { id: mutation.assetItemId },
-        data: {
-          currentRoomId: mutation.toRoomId,
-        },
-      });
+        await tx.assetItem.update({
+          where: { id: mutation.assetItemId },
+          data: {
+            currentRoomId: mutation.toRoomId,
+          },
+        });
 
-      return updated;
-    });
+        return updated;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 
   async getMutationBast(id: string) {

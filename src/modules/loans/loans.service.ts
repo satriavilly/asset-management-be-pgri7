@@ -89,44 +89,50 @@ export class LoansService {
     const startDate = new Date(dto.startDate);
     const expectedReturnDate = new Date(dto.expectedReturnDate);
 
-    return this.prisma.$transaction(async (tx) => {
-      const loan = await tx.assetLoan.create({
-        data: {
-          loanNo: dto.loanNo,
-          borrowerType: dto.borrowerType,
-          borrowerUserId: dto.borrowerUserId,
-          borrowerName: dto.borrowerName,
-          borrowerPhone: dto.borrowerPhone,
-          borrowerIdCard: dto.borrowerIdCard,
-          startDate,
-          expectedReturnDate,
-          purpose: dto.purpose,
-          status: LoanStatus.PENDING,
-        },
-      });
-
-      for (const assetId of dto.assetItemIds) {
-        const asset = await tx.assetItem.findUnique({ where: { id: assetId } });
-        if (!asset) continue;
-
-        await tx.assetLoanItem.create({
+    return this.prisma.$transaction(
+      async (tx) => {
+        const loan = await tx.assetLoan.create({
           data: {
-            loanId: loan.id,
-            assetItemId: asset.id,
-            conditionBefore: asset.condition,
+            loanNo: dto.loanNo,
+            borrowerType: dto.borrowerType,
+            borrowerUserId: dto.borrowerUserId,
+            borrowerName: dto.borrowerName,
+            borrowerPhone: dto.borrowerPhone,
+            borrowerIdCard: dto.borrowerIdCard,
+            startDate,
+            expectedReturnDate,
+            purpose: dto.purpose,
+            status: LoanStatus.PENDING,
           },
         });
-      }
 
-      return this.prisma.assetLoan.findUnique({
-        where: { id: loan.id },
-        include: {
-          items: {
-            include: { assetItem: { include: { item: true } } },
+        for (const assetId of dto.assetItemIds) {
+          const asset = await tx.assetItem.findUnique({ where: { id: assetId } });
+          if (!asset) continue;
+
+          await tx.assetLoanItem.create({
+            data: {
+              loanId: loan.id,
+              assetItemId: asset.id,
+              conditionBefore: asset.condition,
+            },
+          });
+        }
+
+        return this.prisma.assetLoan.findUnique({
+          where: { id: loan.id },
+          include: {
+            items: {
+              include: { assetItem: { include: { item: true } } },
+            },
           },
-        },
-      });
-    });
+        });
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 
   async getLoans() {
@@ -162,27 +168,33 @@ export class LoansService {
 
     const newStatus = approve ? LoanStatus.ON_LOAN : LoanStatus.REJECTED;
 
-    return this.prisma.$transaction(async (tx) => {
-      const updatedLoan = await tx.assetLoan.update({
-        where: { id },
-        data: {
-          status: newStatus,
-          approvedBy: approverId,
-        },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updatedLoan = await tx.assetLoan.update({
+          where: { id },
+          data: {
+            status: newStatus,
+            approvedBy: approverId,
+          },
+        });
 
-      if (approve) {
-        // Update all related asset items to BORROWED status
-        for (const it of loan.items) {
-          await tx.assetItem.update({
-            where: { id: it.assetItemId },
-            data: { status: AssetStatus.BORROWED },
-          });
+        if (approve) {
+          // Update all related asset items to BORROWED status
+          for (const it of loan.items) {
+            await tx.assetItem.update({
+              where: { id: it.assetItemId },
+              data: { status: AssetStatus.BORROWED },
+            });
+          }
         }
-      }
 
-      return updatedLoan;
-    });
+        return updatedLoan;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 
   async returnLoan(id: string, dto: ReturnLoanDto) {
@@ -199,42 +211,48 @@ export class LoansService {
       throw new BadRequestException("Aset belum dalam status dipinjam aktif");
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updatedLoan = await tx.assetLoan.update({
-        where: { id },
-        data: {
-          status: LoanStatus.RETURNED,
-          actualReturnDate: new Date(),
-          penaltyAmount: dto.penaltyAmount ?? 0,
-          penaltyNotes: dto.penaltyNotes,
-        },
-      });
-
-      for (const it of loan.items) {
-        const itemCond = dto.itemConditions?.find((c) => c.assetItemId === it.assetItemId);
-        const conditionAfter = itemCond?.conditionAfter || it.conditionBefore;
-
-        await tx.assetLoanItem.update({
-          where: { id: it.id },
-          data: { conditionAfter },
-        });
-
-        // BPMN Proses 2: Jika Baik -> Tersedia; Jika Rusak/Hilang -> Tidak tersedia untuk dipinjam
-        const nextStatus =
-          conditionAfter === AssetCondition.GOOD
-            ? AssetStatus.AVAILABLE
-            : AssetStatus.UNDER_MAINTENANCE;
-
-        await tx.assetItem.update({
-          where: { id: it.assetItemId },
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updatedLoan = await tx.assetLoan.update({
+          where: { id },
           data: {
-            status: nextStatus,
-            condition: conditionAfter,
+            status: LoanStatus.RETURNED,
+            actualReturnDate: new Date(),
+            penaltyAmount: dto.penaltyAmount ?? 0,
+            penaltyNotes: dto.penaltyNotes,
           },
         });
-      }
 
-      return updatedLoan;
-    });
+        for (const it of loan.items) {
+          const itemCond = dto.itemConditions?.find((c) => c.assetItemId === it.assetItemId);
+          const conditionAfter = itemCond?.conditionAfter || it.conditionBefore;
+
+          await tx.assetLoanItem.update({
+            where: { id: it.id },
+            data: { conditionAfter },
+          });
+
+          // BPMN Proses 2: Jika Baik -> Tersedia; Jika Rusak/Hilang -> Tidak tersedia untuk dipinjam
+          const nextStatus =
+            conditionAfter === AssetCondition.GOOD
+              ? AssetStatus.AVAILABLE
+              : AssetStatus.UNDER_MAINTENANCE;
+
+          await tx.assetItem.update({
+            where: { id: it.assetItemId },
+            data: {
+              status: nextStatus,
+              condition: conditionAfter,
+            },
+          });
+        }
+
+        return updatedLoan;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      },
+    );
   }
 }

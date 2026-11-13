@@ -8,6 +8,7 @@ import { PrismaService } from "@/prisma/prisma.service";
 import { CreateProcurementDto } from "./dto/create-procurement.dto";
 import { AssetCondition, AssetStatus } from "@prisma/client";
 import * as QRCode from "qrcode";
+import { randomUUID } from "node:crypto";
 
 @Injectable()
 export class ProcurementsService {
@@ -49,7 +50,7 @@ export class ProcurementsService {
         },
       });
 
-      const createdAssetItems: any[] = [];
+      const createdAssetCodes: string[] = [];
 
       for (const itemInput of dto.items) {
         const itemMaster = await tx.item.findUnique({
@@ -112,6 +113,8 @@ export class ProcurementsService {
           }
         }
 
+        const assetRecords: any[] = [];
+
         for (let q = 1; q <= itemInput.quantity; q++) {
           currentSeq += 1;
           const seqPadded = String(currentSeq).padStart(3, "0");
@@ -134,31 +137,40 @@ export class ProcurementsService {
             width: 300,
           });
 
-          const assetItem = await tx.assetItem.create({
-            data: {
-              inventoryCode,
-              itemId: itemMaster.id,
-              procurementId: procurement.id,
-              currentRoomId: room.id,
-              serialNumber,
-              photoUrl: itemInput.photoUrl ?? null,
-              acquisitionPrice: itemInput.unitPrice,
-              currentValue: itemInput.unitPrice,
-              condition: AssetCondition.GOOD,
-              status: AssetStatus.AVAILABLE,
-              qrCodeUrl,
-            },
+          assetRecords.push({
+            id: randomUUID(),
+            inventoryCode,
+            itemId: itemMaster.id,
+            procurementId: procurement.id,
+            currentRoomId: room.id,
+            serialNumber,
+            photoUrl: itemInput.photoUrl ?? null,
+            acquisitionPrice: itemInput.unitPrice,
+            currentValue: itemInput.unitPrice,
+            condition: AssetCondition.GOOD,
+            status: AssetStatus.AVAILABLE,
+            qrCodeUrl,
           });
 
-          createdAssetItems.push(assetItem);
+          createdAssetCodes.push(inventoryCode);
+        }
+
+        if (assetRecords.length > 0) {
+          await tx.assetItem.createMany({
+            data: assetRecords,
+          });
         }
       }
 
       return {
         procurement,
-        totalItemsGenerated: createdAssetItems.length,
-        generatedCodes: createdAssetItems.map((a) => a.inventoryCode),
+        totalItemsGenerated: createdAssetCodes.length,
+        generatedCodes: createdAssetCodes,
       };
+    },
+    {
+      maxWait: 15000,
+      timeout: 60000,
     });
   }
 
