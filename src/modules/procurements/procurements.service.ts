@@ -66,11 +66,14 @@ export class ProcurementsService {
           throw new NotFoundException(`Item dengan ID ${itemInput.itemId} tidak ditemukan`);
         }
 
-        const room = await tx.room.findUnique({
-          where: { id: itemInput.targetRoomId },
-        });
-        if (!room) {
-          throw new NotFoundException(`Ruangan dengan ID ${itemInput.targetRoomId} tidak ditemukan`);
+        let room: { id: string } | null = null;
+        if (itemInput.targetRoomId) {
+          room = await tx.room.findUnique({
+            where: { id: itemInput.targetRoomId },
+          });
+          if (!room) {
+            throw new NotFoundException(`Ruangan dengan ID ${itemInput.targetRoomId} tidak ditemukan`);
+          }
         }
 
         // 1. Create ProcurementItem record
@@ -125,7 +128,7 @@ export class ProcurementsService {
           const qrPayload = JSON.stringify({
             code: inventoryCode,
             item: itemMaster.name,
-            brand: itemMaster.brand,
+            brand: itemMaster.brand || undefined,
             modelType: itemMaster.modelType || undefined,
             serialNumber: serialNumber || undefined,
             school: "SMP PGRI 7 Bandung",
@@ -142,7 +145,7 @@ export class ProcurementsService {
             inventoryCode,
             itemId: itemMaster.id,
             procurementId: procurement.id,
-            currentRoomId: room.id,
+            currentRoomId: room?.id ?? null,
             serialNumber,
             photoUrl: itemInput.photoUrl ?? null,
             acquisitionPrice: itemInput.unitPrice,

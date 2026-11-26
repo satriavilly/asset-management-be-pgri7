@@ -35,7 +35,7 @@ export class MutationsService {
       throw new NotFoundException("Ruangan tujuan tidak ditemukan");
     }
 
-    if (asset.currentRoomId === dto.toRoomId) {
+    if (asset.currentRoomId && asset.currentRoomId === dto.toRoomId) {
       throw new BadRequestException("Ruangan tujuan sama dengan ruangan aset saat ini");
     }
 
@@ -43,7 +43,7 @@ export class MutationsService {
       data: {
         mutationNo: dto.mutationNo,
         assetItemId: asset.id,
-        fromRoomId: asset.currentRoomId,
+        fromRoomId: asset.currentRoomId ?? null,
         toRoomId: dto.toRoomId,
         proposedBy: proposerId,
         reason: dto.reason,
@@ -203,7 +203,7 @@ export class MutationsService {
       asset: {
         inventoryCode: mutation.assetItem.inventoryCode,
         name: mutation.assetItem.item.name,
-        brand: mutation.assetItem.item.brand,
+        brand: mutation.assetItem.item.brand || "-",
         modelType: mutation.assetItem.item.modelType,
         serialNumber: mutation.assetItem.serialNumber,
         condition: mutation.assetItem.condition,

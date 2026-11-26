@@ -1,4 +1,4 @@
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
@@ -10,9 +10,19 @@ import {
   IsString,
   IsUUID,
   Min,
+  ValidateIf,
   ValidateNested,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
+const trimOrUndefined = ({ value }: { value: unknown }) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  }
+  return value;
+};
 
 export class ProcurementItemInputDto {
   @ApiProperty({ description: "ID Master Barang" })
@@ -29,17 +39,31 @@ export class ProcurementItemInputDto {
   @Min(0)
   unitPrice: number;
 
-  @ApiProperty({ example: "LAB-KOMP-1", description: "ID Ruangan penempatan awal fisik barang" })
+  @ApiPropertyOptional({
+    example: "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+    nullable: true,
+    description: "ID Ruangan penempatan awal fisik barang (opsional, dapat dikosongkan untuk Tanah/Bangunan atau aset belum ditempatkan)",
+  })
+  @Transform(trimOrUndefined)
+  @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsUUID()
-  targetRoomId: string;
+  @IsOptional()
+  targetRoomId?: string | null;
 
-  @ApiPropertyOptional({ type: [String], example: ["SN-2026-001", "SN-2026-002"], description: "Daftar nomor seri masing-masing unit aset" })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ["SN-2026-001", "SN-2026-002"],
+    description: "Daftar nomor seri masing-masing unit aset",
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   serialNumbers?: string[];
 
-  @ApiPropertyOptional({ example: "https://aset.smppgri7bdg.sch.id/uploads/assets/laptop-01.jpg", description: "URL foto fisik barang" })
+  @ApiPropertyOptional({
+    example: "https://aset.smppgri7bdg.sch.id/uploads/assets/laptop-01.jpg",
+    description: "URL foto fisik barang",
+  })
   @IsString()
   @IsOptional()
   photoUrl?: string;

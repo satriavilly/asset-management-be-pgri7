@@ -71,7 +71,7 @@ export class AuditsService {
 
     // Calculate match status: MATCH or MISPLACED
     const matchStatus =
-      asset.currentRoomId === dto.scannedRoomId
+      asset.currentRoomId !== null && asset.currentRoomId === dto.scannedRoomId
         ? AuditMatch.MATCH
         : AuditMatch.MISPLACED;
 
@@ -81,7 +81,7 @@ export class AuditsService {
         auditSessionId: session.id,
         assetItemId: asset.id,
         scannedRoomId: dto.scannedRoomId,
-        systemRoomId: asset.currentRoomId,
+        systemRoomId: asset.currentRoomId ?? null,
         physicalCondition: dto.physicalCondition,
         matchStatus,
       },
@@ -138,8 +138,8 @@ export class AuditsService {
         id: a.id,
         inventoryCode: a.inventoryCode,
         itemName: a.item.name,
-        brand: a.item.brand,
-        systemRoom: a.currentRoom.name,
+        brand: a.item.brand || "-",
+        systemRoom: a.currentRoom?.name || "Belum ditempatkan",
         matchStatus: AuditMatch.MISSING,
       }));
 

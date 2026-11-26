@@ -24,7 +24,9 @@ export class AssetsService {
       isDisposed: false,
     };
 
-    if (params.roomId) where.currentRoomId = params.roomId;
+    if (params.roomId) {
+      where.currentRoomId = params.roomId === "unassigned" ? null : params.roomId;
+    }
     if (params.condition) where.condition = params.condition;
     if (params.status) where.status = params.status;
     if (params.categoryId) {
@@ -155,8 +157,8 @@ export class AssetsService {
       schoolAddress: "Jl. Kencanawangi Utara No. 20a, Bandung 40257",
       inventoryCode: asset.inventoryCode,
       itemName: asset.item.name,
-      brand: asset.item.brand,
-      roomName: asset.currentRoom.name,
+      brand: asset.item.brand || "-",
+      roomName: asset.currentRoom?.name || "Belum ditempatkan",
       fundingSource: asset.procurement.fundingSource.name,
       procurementYear: new Date(asset.procurement.procurementDate).getFullYear(),
       qrCodeUrl: asset.qrCodeUrl,

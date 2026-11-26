@@ -9,9 +9,9 @@ describe("Stock Opname Reconciliation Algorithm", () => {
 
   function reconcileScannedAsset(
     scannedRoomId: string,
-    currentRoomId: string,
+    currentRoomId: string | null,
   ): AuditMatch {
-    if (scannedRoomId === currentRoomId) {
+    if (currentRoomId !== null && scannedRoomId === currentRoomId) {
       return AuditMatch.MATCH;
     }
     return AuditMatch.MISPLACED;
@@ -24,6 +24,11 @@ describe("Stock Opname Reconciliation Algorithm", () => {
 
   it("should classify asset as MISPLACED if found in different room", () => {
     const result = reconcileScannedAsset("room-lab-2", "room-lab-1");
+    expect(result).toBe(AuditMatch.MISPLACED);
+  });
+
+  it("should classify unplaced asset (currentRoomId = null) as MISPLACED when scanned in a room", () => {
+    const result = reconcileScannedAsset("room-lab-1", null);
     expect(result).toBe(AuditMatch.MISPLACED);
   });
 

@@ -124,12 +124,12 @@ export class DisposalsService {
       asset: {
         inventoryCode: disposal.assetItem.inventoryCode,
         name: disposal.assetItem.item.name,
-        brand: disposal.assetItem.item.brand,
+        brand: disposal.assetItem.item.brand || "-",
         modelType: disposal.assetItem.item.modelType,
         serialNumber: disposal.assetItem.serialNumber,
         acquisitionPrice: Number(disposal.assetItem.acquisitionPrice),
         currentValue: Number(disposal.assetItem.currentValue),
-        lastRoom: disposal.assetItem.currentRoom.name,
+        lastRoom: disposal.assetItem.currentRoom?.name || "Belum ditempatkan",
       },
       witnesses: [
         { name: disposal.witness1Name, role: disposal.witness1Role },

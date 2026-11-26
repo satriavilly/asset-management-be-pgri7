@@ -177,7 +177,7 @@ model Item {
   id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subCategoryId  String      @map("sub_category_id") @db.Uuid
   name           String      @db.VarChar(150)
-  brand          String      @db.VarChar(100)
+  brand          String?     @db.VarChar(100)
   modelType      String?     @map("model_type") @db.VarChar(100)
   unit           String      @db.VarChar(50)
   specifications String?     @db.Text
@@ -257,7 +257,7 @@ model AssetItem {
   inventoryCode    String         @unique @map("inventory_code") @db.VarChar(50)
   itemId           String         @map("item_id") @db.Uuid
   procurementId    String         @map("procurement_id") @db.Uuid
-  currentRoomId    String         @map("current_room_id") @db.Uuid
+  currentRoomId    String?        @map("current_room_id") @db.Uuid
   serialNumber     String?        @map("serial_number") @db.VarChar(100)
   acquisitionPrice Decimal        @map("acquisition_price") @db.Decimal(15, 2)
   currentValue     Decimal        @map("current_value") @db.Decimal(15, 2)
@@ -271,7 +271,7 @@ model AssetItem {
 
   item         Item               @relation(fields: [itemId], references: [id], onDelete: Restrict)
   procurement  Procurement        @relation(fields: [procurementId], references: [id], onDelete: Restrict)
-  currentRoom  Room               @relation("CurrentRoom", fields: [currentRoomId], references: [id], onDelete: Restrict)
+  currentRoom  Room?              @relation("CurrentRoom", fields: [currentRoomId], references: [id], onDelete: Restrict)
   loanItems    AssetLoanItem[]
   maintenances AssetMaintenance[]
   mutations    AssetMutation[]
@@ -326,7 +326,7 @@ model AssetMutation {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   mutationNo      String         @unique @map("mutation_no") @db.VarChar(50)
   assetItemId     String         @map("asset_item_id") @db.Uuid
-  fromRoomId      String         @map("from_room_id") @db.Uuid
+  fromRoomId      String?        @map("from_room_id") @db.Uuid
   toRoomId        String         @map("to_room_id") @db.Uuid
   proposedBy      String         @map("proposed_by") @db.Uuid
   reason          String         @db.Text
@@ -337,7 +337,7 @@ model AssetMutation {
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
 
   assetItem AssetItem @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
-  fromRoom  Room      @relation("FromRoom", fields: [fromRoomId], references: [id], onDelete: Restrict)
+  fromRoom  Room?     @relation("FromRoom", fields: [fromRoomId], references: [id], onDelete: Restrict)
   toRoom    Room      @relation("ToRoom", fields: [toRoomId], references: [id], onDelete: Restrict)
   proposer  User      @relation("MutationProposer", fields: [proposedBy], references: [id], onDelete: Restrict)
   approver  User?     @relation("MutationApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
@@ -386,7 +386,7 @@ model AuditItem {
   auditSessionId    String         @map("audit_session_id") @db.Uuid
   assetItemId       String         @map("asset_item_id") @db.Uuid
   scannedRoomId     String         @map("scanned_room_id") @db.Uuid
-  systemRoomId      String         @map("system_room_id") @db.Uuid
+  systemRoomId      String?        @map("system_room_id") @db.Uuid
   physicalCondition AssetCondition @map("physical_condition")
   matchStatus       AuditMatch     @map("match_status")
   scannedAt         DateTime       @default(now()) @map("scanned_at") @db.Timestamptz(6)
@@ -394,7 +394,7 @@ model AuditItem {
   auditSession AuditSession @relation(fields: [auditSessionId], references: [id], onDelete: Cascade)
   assetItem    AssetItem    @relation(fields: [assetItemId], references: [id], onDelete: Restrict)
   scannedRoom  Room         @relation("ScannedRoom", fields: [scannedRoomId], references: [id], onDelete: Restrict)
-  systemRoom   Room         @relation("SystemRoom", fields: [systemRoomId], references: [id], onDelete: Restrict)
+  systemRoom   Room?        @relation("SystemRoom", fields: [systemRoomId], references: [id], onDelete: Restrict)
 
   @@map("audit_items")
 }
